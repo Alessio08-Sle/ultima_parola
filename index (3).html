@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>L’Ultima Parola</title>
+<style>
+:root{--bg:#ffffff;--fg:#1c1b22;--card:#f1f0f7;--mut:#6b6a78;--acc:#5b4bdb;--ok:#1f9d55;--bad:#d64545;--box:#ffffff;--line:#d9d7e6;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15141b;--fg:#f1f0f7;--card:#22212c;--mut:#a09fb0;--acc:#8b7dff;--ok:#3ecf80;--bad:#ff6b6b;--box:#2b2a37;--line:#3a3949;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15141b;--fg:#f1f0f7;--card:#22212c;--mut:#a09fb0;--acc:#8b7dff;--ok:#3ecf80;--bad:#ff6b6b;--box:#2b2a37;--line:#3a3949;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:720px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:1.7rem;margin:8px 0 4px;text-align:center}
+.sub{color:var(--mut);text-align:center;margin:0 0 20px}
+[hidden]{display:none!important}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px}
+label{display:block;font-size:.85rem;color:var(--mut);margin-bottom:4px}
+input[type=text]{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--box);color:var(--fg);font-size:1rem;margin-bottom:12px}
+.seg{display:flex;gap:10px}
+.seg label{flex:1;margin:0;text-align:center;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--box);color:var(--fg);font-size:1rem;cursor:pointer}
+.seg input{display:none}
+.seg input:checked+span{font-weight:700;color:var(--acc)}
+.seg label:has(input:checked){border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
+button{width:100%;padding:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font-size:1.05rem;font-weight:700;cursor:pointer;margin-top:6px}
+button.alt{background:var(--card);color:var(--fg);border:1px solid var(--line)}
+.pls{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.pl{background:var(--card);border-radius:16px;padding:14px;text-align:center;border:3px solid transparent;opacity:.65}
+.pl.on{border-color:var(--acc);opacity:1}
+.pl .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl .tm{font-size:2.4rem;font-weight:800;font-variant-numeric:tabular-nums}
+.pl .tm.low{color:var(--bad)}
+.def{font-size:1.25rem;text-align:center;min-height:3.2em;display:flex;align-items:center;justify-content:center}
+.word{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:12px 0}
+.b{width:clamp(24px,7vw,44px);height:clamp(34px,10vw,56px);display:flex;align-items:center;justify-content:center;background:var(--box);border:2px solid var(--line);border-radius:8px;font-size:clamp(1.1rem,4vw,1.7rem);font-weight:800}
+.word.ok .b{border-color:var(--ok);color:var(--ok)}
+.word.bad .b{border-color:var(--bad);color:var(--bad)}
+#mic{text-align:center;color:var(--mut);font-size:.9rem;margin:6px 0 10px}
+.win{font-size:1.6rem;text-align:center;font-weight:800;margin:10px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>⏱️ L’Ultima Parola</h1>
+<p class="sub">Indovina la parola prima che scada il tempo</p>
+
+<section id="setup">
+  <div class="card">
+    <label for="n1">Giocatore 1</label>
+    <input type="text" id="n1" placeholder="Inserisci nome" maxlength="16">
+    <label for="n2">Giocatore 2</label>
+    <input type="text" id="n2" placeholder="Inserisci nome" maxlength="16">
+    <label>Tempo a testa</label>
+    <div class="seg">
+      <label><input type="radio" name="t" value="45" checked><span>45 secondi</span></label>
+      <label><input type="radio" name="t" value="60"><span>60 secondi</span></label>
+    </div>
+  </div>
+  <button id="go">Start</button>
+  <p class="sub" style="margin-top:14px">Consenti il microfono quando il browser lo chiede. Funziona meglio con Chrome o Edge.</p>
+</section>
+
+<section id="game" hidden>
+  <div class="pls">
+    <div class="pl" id="c0"><div class="nm" id="p0"></div><div class="tm" id="t0"></div></div>
+    <div class="pl" id="c1"><div class="nm" id="p1"></div><div class="tm" id="t1"></div></div>
+  </div>
+  <div class="card">
+    <div class="def" id="def"></div>
+    <div class="word" id="word"></div>
+  </div>
+  <div id="mic"></div>
+  <div id="src" style="text-align:center;color:var(--mut);font-size:.8rem;margin-bottom:10px"></div>
+  <input type="text" id="ans" placeholder="Oppure scrivi la parola e premi Invio" autocomplete="off">
+</section>
+
+<section id="end" hidden>
+  <div class="card">
+    <div class="win" id="winner"></div>
+    <div class="def" id="last" style="min-height:0"></div>
+    <div class="word bad" id="lastword"></div>
+  </div>
+  <button id="again">Rivincita</button>
+  <button class="alt" id="back">Cambia impostazioni</button>
+</section>
+</main>
+
+<script>
+const WORDS=[
+["piroscafo","Nave mercantile a vapore"],["castello","Fortezza dei signori medievali"],["orologio","Segna le ore al polso o al muro"],
+["formaggio","Si ottiene dal latte cagliato"],["bicicletta","Mezzo a due ruote con i pedali"],["ombrello","Ripara dalla pioggia"],
+["chitarra","Strumento a sei corde"],["farfalla","Insetto dalle ali colorate"],["telescopio","Serve per osservare le stelle"],
+["biblioteca","Luogo pieno di libri da prendere in prestito"],["lucchetto","Chiude catene e bauli"],["calendario","Elenca giorni e mesi dell’anno"],
+["vulcano","Montagna che erutta lava"],["elicottero","Vola con le pale sopra la testa"],["gelato","Dolce freddo in coppetta o cono"],
+["tartaruga","Rettile lento con il guscio"],["fisarmonica","Strumento a mantice con tasti e bottoni"],["lavagna","Ci scrive l’insegnante col gesso"],
+["scoiattolo","Roditore dalla coda folta che ama le noci"],["cannocchiale","Strumento ottico usato dai marinai"],["panettone","Dolce lombardo tipico del Natale"],
+["pellicano","Uccello con un grande sacco sotto il becco"],["tramonto","Il sole che scompare all’orizzonte"],["girasole","Fiore giallo che segue il sole"],
+["sottomarino","Naviga sott’acqua"],["dizionario","Spiega il significato delle parole"],["passaporto","Documento per viaggiare all’estero"],
+["ghiacciaio","Enorme massa di ghiaccio in montagna"],["cavatappi","Stappa le bottiglie di vino"],["paracadute","Rallenta la caduta di chi si lancia"],
+["mongolfiera","Aerostato con cesta e aria calda"],["lanterna","Fa luce, anche a olio o a candela"],["trattore","Veicolo agricolo con grandi ruote posteriori"],
+["armadio","Mobile dove si appendono i vestiti"],["sciarpa","Scalda il collo d’inverno"],["tavolozza","Il pittore ci mescola i colori"],
+["fontana","Zampilla acqua in piazza"],["conchiglia","Si trova in spiaggia, casa di molti molluschi"],["pipistrello","Mammifero volante notturno"],
+["cacciavite","Attrezzo per le viti"],["scacchiera","Ha sessantaquattro caselle"],["marsupio","Borsa che si porta in vita"],
+["rinoceronte","Grosso animale con un corno sul naso"],["spaventapasseri","Pupazzo nei campi contro gli uccelli"],["ponte","Collega le due rive di un fiume"]
+];
+WORDS.push(
+["pergamena","Antico supporto di pelle per scrivere"],["clessidra","Misura il tempo con la sabbia"],["labirinto","Intrico di corridoi da cui è difficile uscire"],
+["archeologo","Studia le civiltà antiche dagli scavi"],["equilibrista","Cammina su un filo sospeso"],["sarcofago","Bara di pietra degli antichi"],
+["catapulta","Macchina d’assedio che lancia massi"],["alabarda","Arma in asta delle guardie svizzere"],["gondola","Barca veneziana dal remo unico"],
+["campanile","Torre che ospita le campane"],["meridiana","Orologio che usa l’ombra del sole"],["bussola","Ha un ago che indica il nord"],
+["sestante","Strumento dei navigatori per misurare gli astri"],["fenicottero","Uccello rosa che sta su una zampa"],["armadillo","Mammifero sudamericano con la corazza"],
+["ornitorinco","Mammifero australiano con il becco da anatra"],["camaleonte","Rettile che cambia colore"],["salamandra","Anfibio nero e giallo"],
+["libellula","Insetto dalle lunghe ali trasparenti vicino agli stagni"],["formicaio","Casa delle formiche"],["alveare","Casa delle api"],
+["stalattite","Concrezione che pende dal soffitto di una grotta"],["arcipelago","Gruppo di isole vicine"],["penisola","Terra circondata dal mare su tre lati"],
+["altopiano","Vasta pianura in quota"],["promontorio","Rilievo che si protende nel mare"],["meteorite","Frammento di roccia caduto dallo spazio"],
+["eclissi","Il sole o la luna che si oscurano"],["costellazione","Gruppo di stelle con un nome"],["asteroide","Piccolo corpo roccioso nello spazio"],
+["ossigeno","Gas che respiriamo"],["magnete","Attira il ferro"],["microscopio","Ingrandisce ciò che l’occhio non vede"],
+["termometro","Misura la temperatura"],["stetoscopio","Il medico lo usa per ascoltare il cuore"],["siringa","Serve per iniettare"],
+["farmacista","Vende le medicine"],["architetto","Progetta edifici"],["ingegnere","Progetta ponti e macchine"],
+["giornalista","Scrive articoli per i quotidiani"],["pasticcere","Prepara torte e paste"],["falegname","Lavora il legno"],
+["muratore","Costruisce con mattoni e malta"],["sarto","Cuce abiti su misura"],["calzolaio","Ripara le scarpe"],
+["fabbro","Lavora il ferro all’incudine"],["incudine","Il fabbro ci batte sopra il metallo"],["martello","Serve per piantare chiodi"],
+["trapano","Fa buchi nel muro"],["portaerei","Nave da guerra con una pista di decollo"],["transatlantico","Grande nave da crociera oceanica"],
+["traghetto","Nave che porta auto e passeggeri da una sponda all’altra"],["motoscafo","Barca veloce a motore"],["veliero","Nave a vele"],
+["faro","Torre luminosa per i naviganti"],["tempesta","Mare e vento in furia"],["uragano","Ciclone tropicale devastante"],
+["terremoto","Scossa della crosta terrestre"],["alluvione","Un fiume che straripa"],["valanga","Massa di neve che precipita dal monte"],
+["arcobaleno","Appare dopo la pioggia con il sole"],["temporale","Pioggia con lampi e tuoni"],["fulmine","Scarica elettrica nel cielo"],
+["nebbia","Nube che si posa al suolo"],["rugiada","Goccioline sull’erba al mattino"],["narciso","Fiore primaverile dal nome di un giovane del mito"],
+["margherita","Fiore bianco dal cuore giallo"],["orchidea","Fiore esotico raffinato"],["tulipano","Fiore simbolo dell’Olanda"],
+["cactus","Pianta grassa del deserto"],["sequoia","Albero californiano altissimo"],["baobab","Albero africano dal tronco enorme"],
+["olivo","Albero da cui si ricava l’olio"],["castagna","Frutto autunnale che si arrostisce"],["melograno","Frutto pieno di chicchi rossi"],
+["albicocca","Frutto estivo arancione con nocciolo"],["ananas","Frutto tropicale con ciuffo spinoso"],["tiramisu","Dolce al mascarpone con caffè"],
+["lasagne","Pasta al forno a strati"],["risotto","Piatto di riso mantecato"],["prosciutto","Salume di coscia di maiale"],
+["mortadella","Salume rosa tipico di Bologna"],["gnocchi","Palline di patate da condire"],["polenta","Piatto di farina di mais"],
+["focaccia","Pane piatto con olio e sale"],["cappuccino","Caffè con schiuma di latte"],["limonata","Bibita di limone e zucchero"],
+["colazione","Il primo pasto del giorno"],["parmigiano","Formaggio stagionato emiliano"],["maratona","Corsa di oltre quaranta chilometri"],
+["trampolino","Da lì si salta nel vuoto con gli sci o in piscina"],["scherma","Sport con fioretto e spada"],["arbitro","Fischia i falli in campo"],
+["portiere","Difende la porta"],["cronometro","Misura il tempo esatto di una gara"],["tamburo","Strumento a percussione a pelle"],
+["violoncello","Strumento ad arco suonato da seduti"],["clarinetto","Strumento a fiato con ancia"],["orchestra","Insieme di strumentisti diretti da un maestro"],
+["sipario","Si apre e chiude sul palco"],["pennello","Il pittore lo intinge nei colori"],["scultore","Ricava statue dal marmo"],
+["affresco","Dipinto su muro con intonaco fresco"],["cattedrale","Chiesa principale di una diocesi"],["colosseo","Anfiteatro simbolo di Roma"],
+["acquedotto","Porta l’acqua alle città"],["gladiatore","Combatteva nell’arena romana"],["cavaliere","Guerriero a cavallo del Medioevo"],
+["pellegrino","Viaggia verso un luogo sacro"],["vichingo","Navigatore scandinavo dei drakkar"],["faraone","Sovrano dell’antico Egitto"],
+["piramide","Tomba monumentale egizia"],["mummia","Corpo imbalsamato dagli antichi egizi"],["archivio","Luogo dove si conservano i documenti"],
+["parlamento","Assemblea che fa le leggi"],["referendum","Voto popolare su una legge"],["costituzione","La legge fondamentale dello Stato"],
+["ambasciatore","Rappresenta il proprio Paese all’estero"],["frontiera","Linea di confine tra due Stati"],["dogana","Controlla le merci alla frontiera"],
+["fattura","Documento che attesta una vendita"],["ragioniere","Tiene i conti di un’azienda"],["bilancio","Il resoconto dei conti di un’azienda"]
+);
+const $=id=>document.getElementById(id);
+let queue=[],fetching=false,sampleFn=null,sampleTried=false,nextTry=0,seen=new Set();
+try{seen=new Set(JSON.parse(localStorage.getItem("up_seen")||"[]"))}catch(_){}
+const TOPICS=["animali","natura","geografia","storia","cucina","sport","musica","scienza","tecnologia","mestieri","arte","oggetti di casa","mare e navigazione","corpo umano","viaggi","cinema e teatro","letteratura","matematica","trasporti","feste e tradizioni","abbigliamento","architettura","meteo","spazio","economia","diritto","vita quotidiana","mitologia","medicina","giochi","piante","strumenti da lavoro","emozioni","scuola","citt\u00e0 e paesi"];
+function setSrc(t){const el=document.getElementById("src");if(el)el.textContent=t}
+async function refill(){
+  if(fetching||Date.now()<nextTry)return;
+  fetching=true;
+  try{
+    if(!sampleTried){sampleTried=true;sampleFn=(window.claude&&claude.use)?await claude.use("sample"):null}
+    if(!sampleFn){setSrc("Parole: solo elenco base (Claude non disponibile in questa pagina)");return}
+    const tp=shuffle(TOPICS.slice()).slice(0,5).join(", ");
+    const lt=shuffle("abcdefghilmnopqrstuvz".split("")).slice(0,8).join(", ");
+    const data=await sampleFn.json(
+"Sei l\u2019autore di un quiz tipo \u201cL\u2019Ultima Parola\u201d de L\u2019Eredit\u00e0. Genera 30 voci diverse tra loro.\n"+
+"Ogni voce: una parola italiana (sostantivo o aggettivo, non nome proprio) di 5-13 lettere, senza spazi, apostrofi, trattini e senza lettere accentate, pi\u00f9 una definizione breve (3-9 parole) che aiuti a indovinarla senza contenere la parola n\u00e9 la sua radice.\n"+
+"Difficolt\u00e0 mista: circa 35% facili, 40% medie, 25% difficili (meno comuni ma note).\n"+
+"Ambiti da usare soprattutto: "+tp+". Includi almeno una parola che inizia con ciascuna di queste lettere: "+lt+".\n"+
+"Evita parole troppo banali come casa o libro. Rispondi solo con un array JSON di coppie [\"parola\",\"definizione\"].",
+      {cache:false,modelTier:"quick"});
+    const arr=Array.isArray(data)?data:(Object.values(data||{}).find(Array.isArray)||[]);
+    const out=[];
+    arr.forEach(p=>{
+      if(!Array.isArray(p)||p.length<2)return;
+      const w=norm(String(p[0])).replace(/ /g,""),d=String(p[1]).trim();
+      if(!/^[a-z]{5,14}$/.test(w)||d.length<4||d.length>90)return;
+      if(seen.has(w)||out.some(o=>o[0]===w)||WORDS.some(x=>x[0]===w))return;
+      if(norm(d).includes(w.slice(0,5)))return;
+      out.push([w,d]);
+    });
+    queue.push(...shuffle(out));setSrc("Parole nuove da Claude pronte: "+queue.length);
+  }catch(e){
+    if(e&&e.code==="not_granted")sampleFn=null;else nextTry=Date.now()+20000;
+    setSrc("Parole: elenco base (Claude: "+((e&&e.code)||"errore")+")");
+  }finally{fetching=false}
+}
+function pick(){
+  if(queue.length<12)refill();
+  if(queue.length&&Math.random()<0.8){
+    const e=queue.shift();seen.add(e[0]);
+    try{localStorage.setItem("up_seen",JSON.stringify([...seen].slice(-1500)))}catch(_){}
+    return e;
+  }
+  if(!deck.length)deck=newDeck();
+  const e=deck.pop();markUsed(e[0]);return e;
+}
+function newDeck(){
+  let used=[];try{used=JSON.parse(localStorage.getItem("up_used")||"[]")}catch(_){}
+  let d=WORDS.filter(w=>!used.includes(w[0]));
+  if(!d.length){d=WORDS.slice();try{localStorage.setItem("up_used","[]")}catch(_){}}
+  return shuffle(d);
+}
+function markUsed(w){try{const u=JSON.parse(localStorage.getItem("up_used")||"[]");u.push(w);localStorage.setItem("up_used",JSON.stringify(u))}catch(_){}}
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z ]/g," ").replace(/\s+/g," ").trim();
+let names=[],left=[0,0],cur=0,deck=[],word="",def="",shown=[],phase="idle",t0=0,base=0,revealed=0,tick=null,rec=null,recOn=false,micStream=null;
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function show(id){["setup","game","end"].forEach(s=>$(s).hidden=s!==id)}
+
+function render(){
+  for(let i=0;i<2;i++){
+    $("t"+i).textContent=(left[i]/1000).toFixed(1);
+    $("t"+i).classList.toggle("low",left[i]<10000);
+    $("c"+i).classList.toggle("on",cur===i);
+  }
+  $("def").textContent=def;
+  $("word").innerHTML=word.split("").map((c,i)=>'<span class="b">'+(shown[i]?c.toUpperCase():"")+'</span>').join("");
+}
+
+function say(txt,cb){
+  let done=false;const f=()=>{if(!done){done=true;cb()}};
+  if(!window.speechSynthesis){setTimeout(f,2500);return}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(txt);u.lang="it-IT";u.onend=f;u.onerror=f;
+  speechSynthesis.speak(u);setTimeout(f,9000);
+}
+
+function next(){
+  [word,def]=pick();
+  shown=word.split("").map((c,i)=>i===0);
+  phase="reading";$("word").className="word";$("ans").value="";
+  render();
+  say(def,begin);
+}
+
+function begin(){
+  if(phase!=="reading")return;
+  phase="play";t0=performance.now();base=left[cur];revealed=0;
+  tick=setInterval(loop,100);
+}
+
+function loop(){
+  const el=performance.now()-t0;
+  left[cur]=Math.max(0,base-el);
+  const want=Math.floor(el/2000);
+  while(revealed<want){
+    const hidden=[];shown.forEach((s,i)=>{if(!s)hidden.push(i)});
+    if(hidden.length<=1)break;
+    shown[hidden[Math.floor(Math.random()*hidden.length)]]=true;revealed++;
+  }
+  render();
+  if(left[cur]<=0)finish();
+}
+
+function correct(){
+  if(phase!=="play")return;
+  clearInterval(tick);phase="done";
+  shown=shown.map(()=>true);render();$("word").className="word ok";
+  setTimeout(()=>{cur=1-cur;next()},1600);
+}
+
+function finish(){
+  clearInterval(tick);phase="over";
+  if(window.speechSynthesis)speechSynthesis.cancel();
+  $("winner").textContent="🏆 Vince "+names[1-cur]+"! "+names[cur]+" ha finito il tempo.";
+  $("last").textContent=def;
+  $("lastword").innerHTML=word.split("").map(c=>'<span class="b">'+c.toUpperCase()+'</span>').join("");
+  show("end");
+}
+
+function initRec(){
+  if(rec&&recOn)return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){$("mic").textContent="Riconoscimento vocale non disponibile qui: usa la casella qui sotto.";return}
+  rec=new SR();rec.lang="it-IT";rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=5;
+  rec.onresult=e=>{
+    if(phase!=="play")return;
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      for(let j=0;j<e.results[i].length;j++){
+        const t=norm(e.results[i][j].transcript);
+        if(t.split(" ").includes(word)||t.replace(/ /g,"")===word){correct();return}
+      }
+    }
+  };
+  rec.onstart=()=>{$("mic").textContent="🎤 Microfono attivo: di’ la parola"};
+  rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed"){recOn=false;$("mic").textContent="Microfono non consentito ("+e.error+"): usa la casella qui sotto."}};
+  rec.onend=()=>{if(recOn)setTimeout(()=>{if(recOn){try{rec.start()}catch(_){}}},200)};
+  recOn=true;
+  const go=()=>{try{rec.start()}catch(_){}};
+  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{micStream=s;go()}).catch(go);else go();
+}
+
+function start(){
+  names=[$("n1").value.trim()||"Giocatore 1",$("n2").value.trim()||"Giocatore 2"];
+  const t=+document.querySelector("input[name=t]:checked").value;
+  left=[t*1000,t*1000];cur=0;if(!deck.length)deck=newDeck();
+  $("p0").textContent=names[0];$("p1").textContent=names[1];
+  show("game");refill();initRec();next();
+}
+
+$("go").onclick=start;
+$("again").onclick=start;
+$("back").onclick=()=>show("setup");
+$("ans").addEventListener("keydown",e=>{
+  if(e.key!=="Enter")return;
+  if(norm($("ans").value).replace(/ /g,"")===word)correct();
+  $("ans").value="";
+});
+</script>
+</body>
+</html>
