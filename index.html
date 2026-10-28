@@ -71,6 +71,7 @@ button.alt{background:var(--card);color:var(--fg);border:1px solid var(--line)}
   </div>
   <div id="mic"></div>
   <div id="src" style="text-align:center;color:var(--mut);font-size:.8rem;margin-bottom:10px"></div>
+  <div id="heard" style="text-align:center;color:var(--mut);font-size:.85rem;min-height:1.4em;margin-bottom:8px"></div>
   <input type="text" id="ans" placeholder="Oppure scrivi la parola e premi Invio" autocomplete="off">
 </section>
 
@@ -226,7 +227,7 @@ function say(txt,cb){
 function next(){
   [word,def]=pick();
   shown=word.split("").map((c,i)=>i===0);
-  phase="reading";$("word").className="word";$("ans").value="";
+  phase="reading";$("word").className="word";$("ans").value="";$("heard").textContent="";
   render();
   say(def,begin);
 }
@@ -234,6 +235,7 @@ function next(){
 function begin(){
   if(phase!=="reading")return;
   phase="play";t0=performance.now();base=left[cur];revealed=0;
+  if(MOBILE&&rec&&recOn){try{rec.start()}catch(_){}}
   tick=setInterval(loop,100);
 }
 
@@ -266,26 +268,34 @@ function finish(){
   show("end");
 }
 
+const MOBILE=/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+function lev(a,b){const m=[];for(let i=0;i<=a.length;i++)m[i]=[i];for(let j=1;j<=b.length;j++)m[0][j]=j;for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return m[a.length][b.length]}
+function close(t){
+  const w=t.split(" ").filter(Boolean),tol=word.length>=10?2:word.length>=6?1:0;
+  const c=[...w,w.join("")];for(let i=0;i<w.length-1;i++)c.push(w[i]+w[i+1]);
+  return c.some(x=>x===word||(tol&&Math.abs(x.length-word.length)<=tol&&lev(x,word)<=tol));
+}
 function initRec(){
   if(rec&&recOn)return;
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){$("mic").textContent="Riconoscimento vocale non disponibile qui: usa la casella qui sotto.";return}
-  rec=new SR();rec.lang="it-IT";rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=5;
+  rec=new SR();rec.lang="it-IT";rec.continuous=!MOBILE;rec.interimResults=true;rec.maxAlternatives=5;
   rec.onresult=e=>{
     if(phase!=="play")return;
     for(let i=e.resultIndex;i<e.results.length;i++){
       for(let j=0;j<e.results[i].length;j++){
         const t=norm(e.results[i][j].transcript);
-        if(t.split(" ").includes(word)||t.replace(/ /g,"")===word){correct();return}
+        if(j===0)$("heard").textContent="Sento: "+e.results[i][0].transcript;
+        if(close(t)){correct();return}
       }
     }
   };
   rec.onstart=()=>{$("mic").textContent="🎤 Microfono attivo: di’ la parola"};
-  rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed"){recOn=false;$("mic").textContent="Microfono non consentito ("+e.error+"): usa la casella qui sotto."}};
-  rec.onend=()=>{if(recOn)setTimeout(()=>{if(recOn){try{rec.start()}catch(_){}}},200)};
+  rec.onerror=e=>{if(e.error==="not-allowed"||e.error==="service-not-allowed"){recOn=false;$("mic").textContent="Microfono non consentito ("+e.error+"): usa la casella qui sotto."}else if(e.error==="network"){recOn=false;$("mic").textContent="Il riconoscimento vocale non funziona su questo browser (errore di rete). Prova Chrome o Edge, oppure usa la casella qui sotto."}else if(e.error!=="no-speech"&&e.error!=="aborted"){$("mic").textContent="Microfono: errore "+e.error}};
+  rec.onend=()=>{if(recOn)setTimeout(()=>{if(recOn&&(!MOBILE||phase==="play")){try{rec.start()}catch(_){}}},300)};
   recOn=true;
   const go=()=>{try{rec.start()}catch(_){}};
-  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{micStream=s;go()}).catch(go);else go();
+  if(!MOBILE&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)navigator.mediaDevices.getUserMedia({audio:true}).then(s=>{micStream=s;go()}).catch(go);else go();
 }
 
 function start(){
